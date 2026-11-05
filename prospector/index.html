@@ -1,0 +1,635 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>EN.IA Prospector</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='22' fill='%23d0703a'/%3E%3Cg stroke='%2317130f' stroke-width='7.5' stroke-linecap='round' fill='none'%3E%3Cpath d='M19 20 H60'/%3E%3Cpath d='M19 50 H49'/%3E%3Cpath d='M19 80 H60'/%3E%3Cpath d='M64 17 L76 81'/%3E%3Cpath d='M77 22 V81'/%3E%3C/g%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600;700&family=Geist+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="">
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+<style>
+:root {
+  --bg: #171310; --card: #211b16; --card-2: #262019; --border: #362f28;
+  --text: #f7f3ec; --body: #ada090; --muted: #857a6c;
+  --accent: #d0703a; --accent-soft: #e0813f; --accent-dim: rgba(208,112,58,0.14);
+  --ok: #7fb069; --warn: #e3b448; --bad: #d9614c;
+  --radius: 16px; --radius-s: 12px;
+  --mono: 'Geist Mono', ui-monospace, 'SF Mono', Menlo, monospace;
+}
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { background: var(--bg); color: var(--body); font-family: 'Geist', ui-sans-serif, system-ui, -apple-system, Arial, sans-serif;
+  font-size: 15px; line-height: 1.55; -webkit-font-smoothing: antialiased; }
+h1, h2, h3 { color: var(--text); font-weight: 700; letter-spacing: -0.02em; line-height: 1.15; }
+a { color: var(--accent-soft); }
+::selection { background: rgba(208,112,58,0.45); color: var(--text); }
+.eyebrow { font-family: var(--mono); font-size: 11px; font-weight: 700; letter-spacing: 0.18em; text-transform: uppercase; color: var(--muted); }
+.wrap { max-width: 1400px; margin: 0 auto; padding: 0 24px; }
+
+/* topo */
+header { border-bottom: 1px solid var(--border); background: rgba(23,19,16,0.92); position: sticky; top: 0; z-index: 1000; backdrop-filter: blur(8px); }
+.top { display: flex; align-items: center; gap: 16px; height: 64px; }
+.brand { display: flex; align-items: center; gap: 12px; text-decoration: none; }
+.brand b { color: var(--text); font-size: 18px; letter-spacing: -0.02em; }
+.brand span { font-family: var(--mono); font-size: 11px; letter-spacing: 0.16em; text-transform: uppercase; color: var(--accent); }
+.pills { margin-left: auto; display: flex; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
+.pill { display: inline-flex; align-items: center; gap: 8px; height: 32px; padding: 0 12px; border: 1px solid var(--border);
+  border-radius: 999px; font-family: var(--mono); font-size: 11px; font-weight: 500; letter-spacing: 0.06em; text-transform: uppercase; color: var(--body); background: var(--card); }
+.dot { width: 8px; height: 8px; border-radius: 50%; background: var(--muted); }
+.dot.ok { background: var(--ok); box-shadow: 0 0 0 3px rgba(127,176,105,0.18); }
+.dot.bad { background: var(--bad); box-shadow: 0 0 0 3px rgba(217,97,76,0.18); }
+.pill button { all: unset; cursor: pointer; color: var(--accent-soft); text-decoration: underline; text-underline-offset: 3px; }
+
+/* layout principal */
+.hero { padding: 28px 0 18px; }
+.hero h1 { font-size: clamp(26px, 3vw, 34px); }
+.hero h1 em { font-style: normal; color: var(--accent); }
+.hero p { margin-top: 6px; max-width: 720px; }
+.main { display: grid; grid-template-columns: 400px 1fr; gap: 20px; align-items: stretch; }
+.card { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); }
+.form { padding: 22px; display: flex; flex-direction: column; gap: 18px; }
+label.f { display: flex; flex-direction: column; gap: 7px; }
+label.f > span, .lbl { font-size: 13px; font-weight: 600; color: var(--text); }
+.hint { font-size: 12.5px; color: var(--muted); }
+input[type=text], input[type=number], select {
+  width: 100%; height: 44px; padding: 0 14px; background: var(--bg); color: var(--text); border: 1px solid var(--border);
+  border-radius: var(--radius-s); font: inherit; outline: none; transition: border-color .15s, box-shadow .15s; }
+input:focus, select:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-dim); }
+.row { display: flex; gap: 8px; }
+.row > * { flex: 1; }
+.btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; height: 44px; padding: 0 20px; border-radius: var(--radius-s);
+  border: 1px solid transparent; font: inherit; font-weight: 600; cursor: pointer; white-space: nowrap;
+  background: linear-gradient(135deg, #e0813f 0%, #cc6a30 100%); color: #fff;
+  box-shadow: 0 10px 28px rgba(208,112,58,0.28), inset 0 1px 0 rgba(255,255,255,0.22); transition: transform .2s, filter .2s, box-shadow .2s; }
+.btn:hover { filter: brightness(1.08); transform: translateY(-1px); }
+.btn:disabled { filter: grayscale(0.6) brightness(0.7); cursor: not-allowed; transform: none; box-shadow: none; }
+.btn.ghost { background: var(--card-2); color: var(--text); border-color: var(--border); box-shadow: none; }
+.btn.small { height: 36px; padding: 0 14px; font-size: 13.5px; }
+.btn.block { width: 100%; height: 50px; font-size: 15.5px; }
+.combo { position: relative; }
+.combo input { padding-right: 44px; }
+.combo-btn { all: unset; position: absolute; right: 6px; top: 6px; width: 32px; height: 32px; display: grid; place-items: center;
+  border-radius: 8px; color: var(--body); cursor: pointer; }
+.combo-btn:hover { background: var(--card-2); color: var(--text); }
+.combo.open .combo-btn svg { transform: rotate(180deg); }
+.combo-list { position: absolute; left: 0; right: 0; top: calc(100% + 6px); z-index: 1200; max-height: 320px; overflow: auto; padding: 6px;
+  background: var(--card-2); border: 1px solid var(--border); border-radius: var(--radius-s); box-shadow: 0 18px 40px rgba(0,0,0,0.45); }
+.combo-list .grp { padding: 10px 10px 4px; font-family: var(--mono); font-size: 10.5px; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; color: var(--muted); }
+.combo-list .opt { padding: 8px 10px; border-radius: 8px; cursor: pointer; font-size: 14px; color: var(--body); }
+.combo-list .opt mark { background: none; color: var(--accent-soft); font-weight: 600; }
+.combo-list .opt.on, .combo-list .opt:hover { background: var(--accent-dim); color: var(--text); }
+.combo-list .empty { padding: 10px; font-size: 13px; color: var(--muted); }
+.results { display: flex; flex-direction: column; gap: 4px; max-height: 210px; overflow: auto; }
+.results button { all: unset; cursor: pointer; padding: 9px 12px; border-radius: 10px; border: 1px solid transparent; font-size: 13.5px; color: var(--body); }
+.results button:hover, .results button.on { background: var(--accent-dim); border-color: rgba(208,112,58,0.35); color: var(--text); }
+.results small { display: block; color: var(--muted); font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 330px; }
+.seg { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; padding: 4px; background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius-s); }
+.seg button { all: unset; text-align: center; cursor: pointer; padding: 9px 8px; border-radius: 9px; font-size: 13.5px; font-weight: 600; color: var(--muted); }
+.seg button.on { background: var(--card-2); color: var(--text); box-shadow: inset 0 0 0 1px var(--border); }
+.seg button:disabled { opacity: .4; cursor: not-allowed; }
+.check { display: flex; align-items: center; gap: 10px; font-size: 14px; color: var(--text); cursor: pointer; }
+.check input { width: 18px; height: 18px; accent-color: var(--accent); }
+.summary { padding: 14px; border-radius: var(--radius-s); background: var(--bg); border: 1px dashed var(--border); font-size: 13.5px; }
+.summary b { color: var(--text); }
+.error { color: var(--bad); font-size: 13.5px; min-height: 1em; }
+
+/* mapa */
+.mapcard { position: relative; overflow: hidden; min-height: 620px; }
+#map { position: absolute; inset: 0; background: #0f0c0a; }
+/* mapa claro do OSM virado para o tema escuro e aquecido para o marrom da EN.IA */
+.leaflet-tile-pane { filter: invert(1) hue-rotate(180deg) brightness(0.82) contrast(0.92) sepia(0.4) saturate(1.3); }
+.leaflet-container { font-family: inherit; }
+.leaflet-control-attribution { background: rgba(23,19,16,0.75) !important; color: var(--muted) !important; }
+.leaflet-control-attribution a { color: var(--body) !important; }
+.leaflet-bar a { background: var(--card) !important; color: var(--text) !important; border-color: var(--border) !important; }
+.legend { position: absolute; left: 16px; bottom: 16px; z-index: 500; padding: 12px 14px; border-radius: var(--radius-s); background: rgba(33,27,22,0.92);
+  border: 1px solid var(--border); font-size: 12.5px; display: flex; flex-direction: column; gap: 6px; max-width: 320px; }
+.legend i { display: inline-block; width: 14px; height: 10px; border-radius: 3px; margin-right: 8px; vertical-align: middle; }
+.maptip { position: absolute; right: 16px; top: 16px; z-index: 500; padding: 8px 12px; border-radius: 999px; background: rgba(33,27,22,0.92);
+  border: 1px solid var(--border); font-family: var(--mono); font-size: 11px; letter-spacing: 0.06em; color: var(--body); }
+.pin { width: 22px; height: 22px; border-radius: 50%; background: var(--accent); border: 3px solid #f7f3ec; box-shadow: 0 0 0 6px rgba(208,112,58,0.3), 0 4px 14px rgba(0,0,0,0.5); }
+
+/* execução */
+section.run { margin: 22px 0 40px; }
+.panel { padding: 22px; }
+.steps { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-top: 14px; }
+.step { padding: 14px 16px; border-radius: var(--radius-s); background: var(--bg); border: 1px solid var(--border); }
+.step .n { font-family: var(--mono); font-size: 12px; font-weight: 700; color: var(--muted); }
+.step b { display: block; color: var(--text); margin-top: 2px; }
+.step small { color: var(--muted); }
+.step.on { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-dim); }
+.step.on .n, .step.done .n { color: var(--accent); }
+.step.done b::after { content: "  ✓"; color: var(--ok); }
+.live { margin-top: 14px; display: flex; align-items: center; gap: 10px; font-family: var(--mono); font-size: 12.5px; color: var(--body);
+  padding: 10px 14px; background: var(--bg); border-radius: 10px; border: 1px solid var(--border); overflow: hidden; }
+.live span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.spin { flex: none; width: 14px; height: 14px; border-radius: 50%; border: 2px solid var(--accent-dim); border-top-color: var(--accent); animation: spin .8s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+details.log { margin-top: 8px; font-size: 12.5px; }
+details.log summary { cursor: pointer; color: var(--muted); }
+details.log pre { margin-top: 8px; padding: 12px; background: var(--bg); border-radius: 10px; border: 1px solid var(--border); font-family: var(--mono);
+  font-size: 11.5px; white-space: pre-wrap; max-height: 220px; overflow: auto; }
+.stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; margin-top: 16px; }
+.stat { padding: 14px 16px; border-radius: var(--radius-s); background: var(--card-2); border: 1px solid var(--border); }
+.stat .v { font-size: 26px; font-weight: 700; color: var(--text); letter-spacing: -0.02em; }
+.stat .k { font-size: 12.5px; color: var(--muted); }
+.stat.a .v { color: var(--ok); } .stat.b .v { color: var(--warn); } .stat.acc .v { color: var(--accent); }
+.confirm { margin-top: 16px; display: flex; align-items: center; gap: 16px; flex-wrap: wrap; padding: 16px 18px; border-radius: var(--radius-s);
+  background: var(--accent-dim); border: 1px solid rgba(208,112,58,0.4); }
+.confirm p { flex: 1; min-width: 260px; color: var(--text); }
+.confirm small { display: block; color: var(--body); }
+.actions { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 16px; }
+.tablewrap { margin-top: 16px; overflow: auto; border: 1px solid var(--border); border-radius: var(--radius-s); }
+table { width: 100%; border-collapse: collapse; font-size: 13.5px; }
+th { position: sticky; top: 0; background: var(--card-2); color: var(--text); text-align: left; font-weight: 600; padding: 10px 12px; white-space: nowrap; border-bottom: 1px solid var(--border); }
+td { padding: 10px 12px; border-bottom: 1px solid var(--border); vertical-align: top; }
+tr:last-child td { border-bottom: 0; }
+td.muted { color: var(--muted); }
+td.tel { white-space: nowrap; }
+.nota { display: inline-grid; place-items: center; width: 28px; height: 28px; border-radius: 8px; font-weight: 700; font-family: var(--mono); }
+.nota.A { background: rgba(127,176,105,0.18); color: var(--ok); }
+.nota.B { background: rgba(227,180,72,0.16); color: var(--warn); }
+.nota.C { background: rgba(133,122,108,0.2); color: var(--body); }
+.yes { color: var(--ok); font-weight: 600; } .no { color: var(--muted); }
+a.btn { text-decoration: none; }
+.files { margin-top: 10px; display: flex; flex-direction: column; gap: 6px; }
+.actions { flex-direction: column; }
+.dl { display: flex; align-items: center; gap: 8px; padding: 10px 12px 10px 16px; border-radius: var(--radius-s); background: var(--bg); border: 1px solid var(--border); }
+.dl > div { flex: 1; min-width: 0; }
+.dl b { display: block; color: var(--text); font-size: 14px; font-weight: 600; }
+.dl small { display: block; color: var(--muted); font-family: var(--mono); font-size: 11.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.dl .btn.small { height: 34px; min-width: 76px; }
+.hidden { display: none !important; }
+.msg { margin-top: 12px; padding: 12px 14px; border-radius: 10px; border: 1px solid rgba(217,97,76,0.4); background: rgba(217,97,76,0.1); color: var(--text); }
+footer { padding: 20px 0 40px; color: var(--muted); font-size: 12.5px; border-top: 1px solid var(--border); }
+
+@media (max-width: 980px) {
+  .main { grid-template-columns: 1fr; }
+  .mapcard { min-height: 420px; }
+  .steps { grid-template-columns: 1fr; }
+  .wrap { padding: 0 16px; }
+}
+</style>
+</head>
+<body>
+<header>
+  <div class="wrap top">
+    <a class="brand" href="/">
+      <svg width="34" height="34" viewBox="0 0 100 100" aria-hidden="true"><rect width="100" height="100" rx="22" fill="#d0703a"/><g stroke="#17130f" stroke-width="7.5" stroke-linecap="round" fill="none"><path d="M19 20 H60"/><path d="M19 50 H49"/><path d="M19 80 H60"/><path d="M64 17 L76 81"/><path d="M77 22 V81"/></g></svg>
+      <div><b>EN.IA</b> <span>Prospector</span></div>
+    </a>
+    <div class="pills">
+      <div class="pill"><i class="dot" id="dotEngine"></i><span id="txtEngine" title="Motor de coleta do Google Maps">Verificando...</span> <button id="btnEngine" class="hidden">Ligar</button></div>
+      <div class="pill"><i class="dot" id="dotKip"></i><span id="txtKip">Kipflow</span></div>
+    </div>
+  </div>
+</header>
+
+<main class="wrap">
+  <div class="hero">
+    <div class="eyebrow">Google Maps · Kipflow · nota A/B/C</div>
+    <h1>Leads B2B <em>validados</em>.</h1>
+    <p>Escolha o nicho e a região. O Prospector coleta no Google Maps, confere CNPJ, sócios e e-mail do decisor no Kipflow e entrega cada lead com nota.</p>
+  </div>
+
+  <div class="main">
+    <form class="card form" id="form" autocomplete="off">
+      <div class="f" style="display:flex;flex-direction:column;gap:7px">
+        <label class="lbl" for="nicho">Nicho</label>
+        <div class="combo" id="combo">
+          <input type="text" id="nicho" placeholder="digite ou escolha, ex.: advocacia" value="escritório de advocacia" required
+                 role="combobox" aria-expanded="false" aria-controls="nichoList" aria-autocomplete="list">
+          <button type="button" class="combo-btn" id="nichoBtn" aria-label="Ver todos os nichos" tabindex="-1">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M6 9l6 6 6-6"/></svg>
+          </button>
+          <div class="combo-list hidden" id="nichoList" role="listbox"></div>
+        </div>
+        <span class="hint">O texto vira a busca no Google Maps. Pode digitar um nicho que não está na lista.</span>
+      </div>
+
+      <div class="f" style="display:flex;flex-direction:column;gap:7px">
+        <span class="lbl">Região</span>
+        <div class="row">
+          <input type="text" id="local" placeholder="cidade ou bairro, ex.: Pinheiros, São Paulo" style="flex:3">
+          <button class="btn ghost" type="button" id="btnLocal" style="flex:1">Buscar</button>
+        </div>
+        <div class="results" id="results"></div>
+        <span class="hint">Depois de escolher, clique no mapa ou arraste o pino para ajustar o centro.</span>
+      </div>
+
+      <div class="f" style="display:flex;flex-direction:column;gap:7px">
+        <span class="lbl">Cobertura</span>
+        <div class="seg">
+          <button type="button" id="modoPonto" class="on">Área do pino</button>
+          <button type="button" id="modoGrade">Região inteira em grade</button>
+        </div>
+        <div class="row hidden" id="gradeRow">
+          <select id="grade">
+            <option value="2">Grade 2 × 2 (4 buscas)</option>
+            <option value="3" selected>Grade 3 × 3 (9 buscas)</option>
+            <option value="4">Grade 4 × 4 (16 buscas)</option>
+            <option value="5">Grade 5 × 5 (25 buscas)</option>
+          </select>
+        </div>
+        <span class="hint" id="modoHint">Uma busca centrada no pino. Bom para um bairro ou até 30 leads.</span>
+      </div>
+
+      <div class="row">
+        <label class="f"><span>Quantidade de leads</span><input type="number" id="quantidade" min="1" max="300" value="10"></label>
+        <label class="f"><span>Mín. de avaliações</span><input type="number" id="minav" min="0" max="100000" value="0"></label>
+      </div>
+      <label class="check"><input type="checkbox" id="telefone" checked> Só lugares com telefone</label>
+
+      <div class="summary" id="summary">Escolha uma região para ver a área da busca.</div>
+      <div class="error" id="formErr"></div>
+      <button class="btn block" type="submit" id="btnColetar">Coletar no Google Maps</button>
+    </form>
+
+    <div class="card mapcard">
+      <div id="map"></div>
+      <div class="maptip" id="maptip">CLIQUE NO MAPA PARA MOVER O PINO</div>
+      <div class="legend">
+        <div><i style="background:rgba(208,112,58,0.18);border:1.5px dashed #e0813f"></i>Limite do local escolhido</div>
+        <div><i style="background:rgba(208,112,58,0.35);border:2px solid #d0703a"></i><span id="legArea">Área que o Google Maps vai varrer</span></div>
+        <div style="color:var(--muted)">O Google pode trazer alguns lugares logo além da borda.</div>
+      </div>
+    </div>
+  </div>
+
+  <section class="run hidden" id="run">
+    <div class="card panel">
+      <div class="eyebrow" id="runTitle">Execução</div>
+      <div class="steps">
+        <div class="step" id="st1"><div class="n">01</div><b>Coleta no Google Maps</b><small>lugares, sites, e-mails, pixels</small></div>
+        <div class="step" id="st2"><div class="n">02</div><b>Validação no Kipflow</b><small>CNPJ, sócios, e-mail do decisor</small></div>
+        <div class="step" id="st3"><div class="n">03</div><b>Nota e planilha</b><small>A / B / C pronta para validar</small></div>
+      </div>
+      <div class="live" id="live"><i class="spin" id="spin"></i><span id="liveTxt">Preparando...</span></div>
+      <details class="log"><summary>Ver registro completo</summary><pre id="logTxt"></pre></details>
+      <div class="msg hidden" id="runMsg"></div>
+      <div class="stats" id="stats"></div>
+      <div class="confirm hidden" id="confirm">
+        <p id="confirmTxt"></p>
+        <button class="btn" id="btnValidar">Validar no Kipflow</button>
+      </div>
+      <div class="actions" id="downloads"></div>
+      <div class="tablewrap hidden" id="tableWrap"><table id="table"></table></div>
+    </div>
+  </section>
+
+  <section class="run" id="history">
+    <div class="card panel">
+      <div class="eyebrow">Arquivos gerados</div>
+      <div class="files" id="files"><span class="hint">Nenhum arquivo ainda.</span></div>
+    </div>
+  </section>
+</main>
+
+<footer><div class="wrap">EN.IA Prospector · roda só neste computador · dados pessoais: use conforme a LGPD, registre a origem e ofereça descadastro.</div></footer>
+
+<script>
+const $ = (id) => document.getElementById(id);
+const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const brl = (v) => v == null ? "—" : v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+const state = { place: null, center: null, modo: "ponto", runId: null, timer: null };
+
+async function api(path, body) {
+  const opt = body === undefined ? {} : { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) };
+  const r = await fetch(path, opt);
+  const js = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(js.erro || `erro ${r.status}`);
+  return js;
+}
+
+/* ---------- nicho: lista com busca ---------- */
+const NICHOS = {
+  "Jurídico e contábil": ["escritório de advocacia", "advogado trabalhista", "advogado previdenciário", "advogado de família",
+    "advogado tributarista", "escritório de contabilidade", "assessoria contábil", "cartório", "despachante"],
+  "Saúde": ["clínica odontológica", "clínica médica", "clínica de estética", "clínica de fisioterapia", "clínica de psicologia",
+    "clínica veterinária", "laboratório de análises clínicas", "clínica de nutrição", "clínica oftalmológica", "dermatologista", "ortopedista"],
+  "Imóveis e construção": ["imobiliária", "construtora", "incorporadora", "arquiteto", "escritório de engenharia",
+    "loja de materiais de construção", "empresa de reformas", "administradora de condomínios", "energia solar"],
+  "Educação": ["escola particular", "escola de idiomas", "curso profissionalizante", "faculdade", "autoescola", "escola de música"],
+  "Serviços para empresas": ["agência de marketing", "agência de publicidade", "empresa de software", "consultoria empresarial",
+    "empresa de TI", "empresa de RH e recrutamento", "corretora de seguros", "empresa de segurança", "empresa de limpeza",
+    "gráfica", "coworking", "transportadora", "empresa de logística"],
+  "Bem-estar e beleza": ["academia", "estúdio de pilates", "crossfit", "salão de beleza", "barbearia", "spa"],
+  "Varejo e automotivo": ["concessionária", "loja de veículos seminovos", "oficina mecânica", "auto center", "ótica",
+    "loja de móveis planejados", "pet shop", "farmácia"],
+  "Alimentação e eventos": ["restaurante", "buffet de festas", "espaço para eventos", "hotel", "pousada"],
+};
+const sem = (s) => s.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
+const combo = { idx: -1, items: [] };
+
+function abrirNichos(filtrar) {
+  const termo = filtrar ? sem($("nicho").value.trim()) : "";
+  const list = $("nichoList");
+  let html = "";
+  combo.items = [];
+  for (const [grupo, nomes] of Object.entries(NICHOS)) {
+    const achados = nomes.filter((n) => !termo || sem(n).includes(termo) || sem(grupo).includes(termo));
+    if (!achados.length) continue;
+    html += `<div class="grp">${esc(grupo)}</div>`;
+    for (const n of achados) {
+      const i = combo.items.push(n) - 1;
+      let label = esc(n);
+      const p = termo ? sem(n).indexOf(termo) : -1;
+      if (p >= 0) label = `${esc(n.slice(0, p))}<mark>${esc(n.slice(p, p + termo.length))}</mark>${esc(n.slice(p + termo.length))}`;
+      html += `<div class="opt" role="option" data-i="${i}">${label}</div>`;
+    }
+  }
+  list.innerHTML = html || `<div class="empty">Nenhum nicho na lista. Pode usar "${esc($("nicho").value.trim())}" mesmo: vira a busca no Maps.</div>`;
+  combo.idx = -1;
+  list.classList.remove("hidden");
+  $("combo").classList.add("open");
+  $("nicho").setAttribute("aria-expanded", "true");
+}
+function fecharNichos() {
+  $("nichoList").classList.add("hidden");
+  $("combo").classList.remove("open");
+  $("nicho").setAttribute("aria-expanded", "false");
+}
+function escolherNicho(n) { $("nicho").value = n; fecharNichos(); draw(false); }
+function marcar(i) {
+  const opts = [...$("nichoList").querySelectorAll(".opt")];
+  if (!opts.length) return;
+  combo.idx = (i + opts.length) % opts.length;
+  opts.forEach((o, k) => o.classList.toggle("on", k === combo.idx));
+  opts[combo.idx].scrollIntoView({ block: "nearest" });
+}
+$("nichoBtn").onclick = () => $("nichoList").classList.contains("hidden") ? (abrirNichos(false), $("nicho").focus()) : fecharNichos();
+$("nicho").addEventListener("focus", () => { $("nicho").select(); abrirNichos(false); });
+$("nicho").addEventListener("input", () => abrirNichos(true));
+$("nicho").addEventListener("keydown", (e) => {
+  const aberto = !$("nichoList").classList.contains("hidden");
+  if (e.key === "ArrowDown") { e.preventDefault(); aberto ? marcar(combo.idx + 1) : abrirNichos(false); }
+  else if (e.key === "ArrowUp" && aberto) { e.preventDefault(); marcar(combo.idx - 1); }
+  else if (e.key === "Enter" && aberto) { e.preventDefault(); combo.idx >= 0 ? escolherNicho(combo.items[combo.idx]) : fecharNichos(); }
+  else if (e.key === "Escape") fecharNichos();
+});
+$("nichoList").addEventListener("mousedown", (e) => {
+  const o = e.target.closest(".opt");
+  if (o) { e.preventDefault(); escolherNicho(combo.items[+o.dataset.i]); }
+});
+document.addEventListener("mousedown", (e) => { if (!$("combo").contains(e.target)) fecharNichos(); });
+
+/* ---------- mapa ---------- */
+const map = L.map("map", { zoomControl: true }).setView([-23.55, -46.63], 11);
+L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
+  maxZoom: 19,
+  attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+}).addTo(map);
+const placeLayer = L.layerGroup().addTo(map);
+const areaLayer = L.layerGroup().addTo(map);
+const marker = L.marker([-23.55, -46.63], { draggable: true, icon: L.divIcon({ className: "", html: '<div class="pin"></div>', iconSize: [22, 22], iconAnchor: [11, 11] }) });
+marker.on("dragend", () => { state.center = marker.getLatLng(); draw(false); });
+map.on("click", (e) => {
+  if (!state.place) { $("formErr").textContent = "Busque e escolha uma região primeiro."; return; }
+  if (state.modo === "grade") return;
+  state.center = e.latlng; marker.setLatLng(e.latlng); draw(false);
+});
+
+// Se a janela ou o painel mudar de tamanho, reenquadra a região, a menos que a pessoa já tenha mexido no mapa.
+let mexeu = false;
+map.on("dragstart", () => { mexeu = true; });
+$("map").addEventListener("wheel", () => { mexeu = true; }, { passive: true });
+new ResizeObserver(() => { map.invalidateSize(); if (state.place && !mexeu) draw(true); }).observe($("map"));
+
+const M_PER_DEG = 6371000 * Math.PI / 180;
+function viewportBox(lat, lon) {
+  // O motor abre o Google Maps no zoom 15 (~1000 px de largura), o mesmo cálculo do scripts/scrape.py.
+  const cos = Math.cos(lat * Math.PI / 180);
+  const w = 156543.03 * cos * 1000 / 2 ** 15, h = w * 0.75;
+  const dLat = h / 2 / M_PER_DEG, dLon = w / 2 / (M_PER_DEG * cos);
+  return { bounds: [[lat - dLat, lon - dLon], [lat + dLat, lon + dLon]], w, h };
+}
+const km = (m) => (m / 1000).toLocaleString("pt-BR", { maximumFractionDigits: 1 }) + " km";
+const AREA = { color: "#d0703a", weight: 2, fillColor: "#d0703a", fillOpacity: 0.22 };
+
+function draw(fit) {
+  placeLayer.clearLayers(); areaLayer.clearLayers();
+  const p = state.place;
+  if (!p) return;
+  if (p.geojson) L.geoJSON(p.geojson, { style: { color: "#e0813f", weight: 1.5, dashArray: "6 6", fillColor: "#d0703a", fillOpacity: 0.07 }, interactive: false }).addTo(placeLayer);
+  let txt;
+  if (state.modo === "grade") {
+    const [s, n, w, e] = p.bbox, g = +$("grade").value;
+    L.rectangle([[s, w], [n, e]], { ...AREA, fillOpacity: 0.12, interactive: false }).addTo(areaLayer);
+    for (let i = 1; i < g; i++) {
+      const la = s + (n - s) * i / g, lo = w + (e - w) * i / g;
+      L.polyline([[la, w], [la, e]], { color: "#d0703a", weight: 1, opacity: 0.8, interactive: false }).addTo(areaLayer);
+      L.polyline([[s, lo], [n, lo]], { color: "#d0703a", weight: 1, opacity: 0.8, interactive: false }).addTo(areaLayer);
+    }
+    for (let i = 0; i < g; i++) for (let j = 0; j < g; j++) {
+      const la = s + (n - s) * (i + 0.5) / g, lo = w + (e - w) * (j + 0.5) / g;
+      L.circleMarker([la, lo], { radius: 3, color: "#f7f3ec", weight: 1, fillColor: "#d0703a", fillOpacity: 1, interactive: false }).addTo(areaLayer);
+    }
+    map.removeLayer(marker);
+    const cos = Math.cos(((s + n) / 2) * Math.PI / 180);
+    txt = `<b>${g * g} buscas</b> em grade sobre <b>${esc(p.curto)}</b> (${km((e - w) * M_PER_DEG * cos)} × ${km((n - s) * M_PER_DEG)}), uma de cada vez.`;
+    if (fit) map.fitBounds([[s, w], [n, e]], { padding: [30, 30] });
+  } else {
+    const c = state.center, box = viewportBox(c.lat, c.lng);
+    L.rectangle(box.bounds, { ...AREA, interactive: false }).addTo(areaLayer);
+    marker.setLatLng(c).addTo(map);
+    txt = `Busca centrada no pino em <b>${esc(p.curto)}</b>: área de cerca de <b>${km(box.w)} × ${km(box.h)}</b>.`;
+    if (fit) map.fitBounds(p.geojson ? L.geoJSON(p.geojson).getBounds() : box.bounds, { padding: [30, 30], maxZoom: 14 });
+  }
+  $("summary").innerHTML = `<b>${esc($("nicho").value || "nicho")}</b> · ${txt}`;
+  $("maptip").classList.toggle("hidden", state.modo === "grade");
+}
+
+/* ---------- busca de local ---------- */
+async function buscarLocal(termo, autoPick) {
+  $("formErr").textContent = "";
+  $("results").innerHTML = '<span class="hint">Buscando no OpenStreetMap...</span>';
+  try {
+    const { resultados } = await api(`/api/local?q=${encodeURIComponent(termo)}`);
+    if (!resultados.length) { $("results").innerHTML = '<span class="hint">Nada encontrado. Tente "bairro, cidade".</span>'; return; }
+    $("results").innerHTML = "";
+    resultados.forEach((r, i) => {
+      const b = document.createElement("button");
+      b.type = "button";
+      b.innerHTML = `${esc(r.curto)} <small>${esc(r.tipo || "")} · ${esc(r.completo)}</small>`;
+      b.onclick = () => escolher(r, b);
+      $("results").appendChild(b);
+      if (autoPick && i === 0) escolher(r, b);
+    });
+  } catch (e) { $("results").innerHTML = `<span class="error">${esc(e.message)}</span>`; }
+}
+function escolher(r, btn) {
+  document.querySelectorAll(".results button").forEach((b) => b.classList.remove("on"));
+  btn.classList.add("on");
+  state.place = r;
+  state.center = L.latLng(+r.lat, +r.lon);
+  mexeu = false;
+  $("modoGrade").disabled = !(r.bbox && r.bbox.length === 4);
+  if ($("modoGrade").disabled && state.modo === "grade") setModo("ponto");
+  draw(true);
+}
+$("btnLocal").onclick = () => { const t = $("local").value.trim(); if (t) buscarLocal(t); };
+$("local").addEventListener("keydown", (e) => { if (e.key === "Enter") { e.preventDefault(); $("btnLocal").click(); } });
+
+function setModo(m) {
+  state.modo = m;
+  $("modoPonto").classList.toggle("on", m === "ponto");
+  $("modoGrade").classList.toggle("on", m === "grade");
+  $("gradeRow").classList.toggle("hidden", m !== "grade");
+  $("modoHint").textContent = m === "grade"
+    ? "Divide a região em quadrados e busca cada um. Passa do limite de ~120 resultados por busca, mas demora mais e pode gerar bloqueio temporário do Google."
+    : "Uma busca centrada no pino. Bom para um bairro ou até 30 leads.";
+  $("legArea").textContent = m === "grade" ? "Quadrados da grade (um por busca)" : "Área que o Google Maps vai varrer";
+  draw(true);
+}
+$("modoPonto").onclick = () => setModo("ponto");
+$("modoGrade").onclick = () => setModo("grade");
+$("grade").onchange = () => draw(false);
+$("nicho").oninput = () => draw(false);
+
+/* ---------- estado do sistema ---------- */
+async function estado() {
+  try {
+    const e = await api("/api/estado");
+    $("dotEngine").className = "dot " + (e.engine.ok ? "ok" : "bad");
+    $("txtEngine").textContent = e.engine.ok ? "Online" : "Offline";
+    $("btnEngine").classList.toggle("hidden", e.engine.ok);
+    $("dotKip").className = "dot " + (e.kipflow ? "ok" : "bad");
+    $("txtKip").textContent = e.kipflow ? "Kipflow conectado" : "Kipflow sem chave";
+    if (e.execucao_ativa && !state.runId) acompanhar(e.execucao_ativa);
+  } catch { $("dotEngine").className = "dot bad"; $("txtEngine").textContent = "Offline"; }
+}
+$("btnEngine").onclick = async () => {
+  $("txtEngine").textContent = "Ligando...";
+  try { await api("/api/engine/iniciar", {}); } catch (e) { alert(e.message); }
+  estado();
+};
+
+/* ---------- coleta ---------- */
+$("form").onsubmit = async (ev) => {
+  ev.preventDefault();
+  $("formErr").textContent = "";
+  if (!state.place) { $("formErr").textContent = "Busque e escolha uma região."; return; }
+  const p = state.place;
+  const body = {
+    nicho: $("nicho").value.trim(), local_curto: p.curto, local_busca: p.completo, modo: state.modo,
+    grade: +$("grade").value, lat: state.modo === "grade" ? +p.lat : state.center.lat, lon: state.modo === "grade" ? +p.lon : state.center.lng,
+    quantidade: +$("quantidade").value, min_avaliacoes: +$("minav").value, so_telefone: $("telefone").checked,
+  };
+  $("btnColetar").disabled = true;
+  try { const r = await api("/api/coleta", body); acompanhar(r.id); }
+  catch (e) { $("formErr").textContent = e.message; $("btnColetar").disabled = false; }
+};
+
+function acompanhar(id) {
+  state.runId = id;
+  history.replaceState(null, "", `/?execucao=${id}`);  // recarregar a página mantém a execução na tela
+  $("run").classList.remove("hidden");
+  $("run").scrollIntoView({ behavior: "smooth", block: "start" });
+  clearInterval(state.timer);
+  const tick = async () => {
+    try {
+      const r = await api(`/api/execucao/${id}`);
+      render(r);
+      if (!r.ativo) { clearInterval(state.timer); state.timer = null; carregarLeads(id); arquivos(); }
+    } catch (e) { clearInterval(state.timer); }
+  };
+  tick();
+  state.timer = setInterval(tick, 1500);
+}
+
+function baixar(titulo, sub, nome) {
+  const u = `/baixar/${encodeURIComponent(nome)}`;
+  return `<div class="dl"><div><b>${esc(titulo)}</b><small>${esc(sub)}</small></div>
+    <a class="btn small" href="${u}?formato=excel">Excel</a><a class="btn small ghost" href="${u}">CSV</a></div>`;
+}
+const stat = (v, k, cls = "") => `<div class="stat ${cls}"><div class="v">${v}</div><div class="k">${k}</div></div>`;
+function render(r) {
+  const p = r.params;
+  $("runTitle").textContent = `Execução · ${p.nicho} em ${p.local_curto}${p.modo === "grade" ? ` · grade ${p.grade}×${p.grade}` : ""}`;
+  // quantos passos terminaram e qual está em andamento
+  const feitos = r.arquivos.final ? 3 : r.arquivos.maps ? 1 : 0;
+  const atual = { coleta: 1, aguardando: 2, validacao: 2 }[r.etapa] || 0;
+  ["st1", "st2", "st3"].forEach((s, i) => {
+    $(s).classList.toggle("done", i < feitos);
+    $(s).classList.toggle("on", i + 1 === atual);
+  });
+  $("spin").classList.toggle("hidden", !r.ativo);
+  const fixo = { aguardando: "Coleta concluída. Confira os lugares e confirme a validação no Kipflow.", concluido: "Tudo pronto. Baixe a planilha para validar os leads.", erro: "A execução parou com erro." };
+  $("liveTxt").textContent = r.ativo ? (r.linha || "Trabalhando...") : (fixo[r.etapa] || r.linha);
+  $("logTxt").textContent = r.log.join("\n");
+  $("runMsg").classList.toggle("hidden", !r.mensagem);
+  $("runMsg").textContent = r.mensagem;
+
+  const s = r.resumo || {};
+  let html = "";
+  if (s.coletados != null) html += stat(s.coletados, "lugares coletados") + stat(s.com_site, "com site") + stat(s.com_email, "com e-mail no site") + stat(s.dominio_proprio, "com domínio próprio");
+  if (s.A != null) html += stat(s.cnpj_ativo, "com CNPJ ativo") + stat(s.com_decisor, "com decisor") + stat(s.email_verificado, "e-mail do decisor verificado")
+    + stat(s.A, "nota A", "a") + stat(s.B, "nota B", "b") + stat(s.C, "nota C");
+  if (s.cobrado != null) {
+    html += stat(brl(s.cobrado), "cobrado pelo Kipflow nesta rodada", "acc") + stat(brl(s.cobrado_por_a), "cobrado por lead A", "acc");
+    const cache = s.custo_total - s.cobrado;
+    if (cache > 0.004) html += stat(brl(cache), "economizado com consultas já feitas");
+  } else if (s.A != null) {
+    html += stat(brl(s.custo_total), "valor das consultas (pode incluir cache)") + stat(brl(s.custo_por_a), "valor das consultas por lead A");
+  }
+  $("stats").innerHTML = html;
+
+  const aguard = r.etapa === "aguardando";
+  $("confirm").classList.toggle("hidden", !aguard);
+  if (aguard) {
+    $("confirmTxt").innerHTML = `Validar <b>${s.dominio_proprio}</b> lugares com domínio próprio no Kipflow.<small>Estimativa: ${brl(s.estimativa)} (R$ 0,20 por empresa encontrada no piloto). Empresas não encontradas não são cobradas.</small>`;
+    $("btnValidar").disabled = !s.dominio_proprio;
+  }
+  const a = r.arquivos, links = [];
+  if (a.final) links.push(baixar("Leads validados", "planilha com abas Leads, Funil e Legenda", a.final));
+  if (a.maps) links.push(baixar("Lugares do Google Maps", "coleta bruta, antes do Kipflow", a.maps));
+  $("downloads").innerHTML = links.join("");
+  $("btnColetar").disabled = r.ativo;
+}
+
+$("btnValidar").onclick = async () => {
+  $("btnValidar").disabled = true;
+  try { await api(`/api/execucao/${state.runId}/validar`, {}); acompanhar(state.runId); }
+  catch (e) { alert(e.message); $("btnValidar").disabled = false; }
+};
+
+const safeUrl = (u) => /^https?:\/\//i.test(u || "") ? u : "";
+async function carregarLeads(id) {
+  const { tipo, linhas } = await api(`/api/execucao/${id}/leads`);
+  $("tableWrap").classList.toggle("hidden", !linhas.length);
+  if (!linhas.length) return;
+  const site = (u) => { const s = safeUrl(u); return s ? `<a href="${esc(s)}" target="_blank" rel="noopener noreferrer">${esc(s.replace(/^https?:\/\/(www\.)?/, "").replace(/\/$/, "").slice(0, 34))}</a>` : '<span class="no">—</span>'; };
+  const av = (r) => r.review_rating ? `${esc(r.review_rating)} <span class="no">(${esc(r.review_count || 0)})</span>` : '<span class="no">—</span>';
+  let head, rows;
+  if (tipo === "final") {
+    head = ["Nota", "Escritório / empresa", "Decisor", "Cargo", "E-mail verificado", "Telefone", "Google", "Por quê"];
+    rows = linhas.map((r) => `<tr><td><span class="nota ${esc(r.nota)}">${esc(r.nota)}</span></td><td><b style="color:var(--text)">${esc(r.title)}</b><br><span class="no">${esc(r.razao_social || "")}</span></td>
+      <td>${esc(r.decisor_nome) || '<span class="no">—</span>'}</td><td class="muted">${esc(r.decisor_cargo) || "—"}</td>
+      <td>${r.decisor_email_verificado === "sim" ? '<span class="yes">sim</span>' : '<span class="no">não</span>'}</td><td class="tel">${esc(r.phone)}</td><td>${av(r)}</td><td class="muted">${esc(r.motivo_nota)}</td></tr>`);
+  } else {
+    head = ["Lugar", "Telefone", "Site", "E-mails do site", "Google", "Endereço"];
+    rows = linhas.map((r) => `<tr><td><b style="color:var(--text)">${esc(r.title)}</b></td><td class="tel">${esc(r.phone)}</td><td>${site(r.website)}</td>
+      <td class="muted">${esc(r.emails) || "—"}</td><td>${av(r)}</td><td class="muted">${esc(r.address)}</td></tr>`);
+  }
+  $("table").innerHTML = `<thead><tr>${head.map((h) => `<th>${h}</th>`).join("")}</tr></thead><tbody>${rows.join("")}</tbody>`;
+}
+
+async function arquivos() {
+  try {
+    const { arquivos } = await api("/api/arquivos");
+    if (!arquivos.length) return;
+    $("files").innerHTML = arquivos.map((a) => baixar(a.tipo, `${a.nome} · ${a.data}`, a.nome)).join("");
+  } catch {}
+}
+
+const salva = new URLSearchParams(location.search).get("execucao");
+if (/^[0-9a-f]{10}$/.test(salva || "")) acompanhar(salva);
+estado(); arquivos();
+setInterval(estado, 15000);
+$("local").value = "São Paulo, SP";
+buscarLocal("São Paulo, SP", true);
+</script>
+</body>
+</html>
